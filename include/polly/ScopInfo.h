@@ -640,6 +640,10 @@ public:
 
   bool hasStrides() const { return Shape.hasStrides(); }
 
+  bool getValidBounds();
+
+  void setValidBounds(bool valid);
+
 private:
   void addDerivedSAI(ScopArrayInfo *DerivedSAI) {
     DerivedSAIs.insert(DerivedSAI);
@@ -689,6 +693,9 @@ private:
   /// If this array models a Fortran array, then this points
   /// to the Fortran array descriptor.
   Value *FAD = nullptr;
+
+  /// are the bounds we computed valid?
+  bool validBounds = true;
 };
 
 /// Represent memory accesses in statements.

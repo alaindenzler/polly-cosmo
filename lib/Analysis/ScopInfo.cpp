@@ -651,6 +651,14 @@ const ScopArrayInfo *ScopArrayInfo::getFromId(isl::id Id) {
   return SAI;
 }
 
+void ScopArrayInfo::setValidBounds(bool valid) {
+  validBounds = valid;
+}
+
+bool ScopArrayInfo::getValidBounds() {
+  return validBounds;
+}
+
 void MemoryAccess::wrapConstantDimensions() {
   auto *SAI = getScopArrayInfo();
   isl::space ArraySpace = SAI->getSpace();

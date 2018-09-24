@@ -1040,6 +1040,8 @@ private:
   void createDataTransfer(__isl_take isl_ast_node *TransferStmt,
                           enum DataDirection Direction);
 
+  void createPrefetchCall(__isl_take isl_ast_node *TransferStmt);
+
   /// Find llvm::Values referenced in GPU kernel.
   ///
   /// @param Kernel The kernel to scan for llvm::Values
@@ -1334,6 +1336,8 @@ private:
   /// @param HostPtr A host pointer specifying the location to copy to.
   void createCallCopyFromDeviceToHost(Value *DevicePtr, Value *HostPtr,
                                       Value *Size);
+
+  void createCallPrefetchAsync(Value *Ptr, Value *Size);
 
   /// Create a call to synchronize Host & Device.
   /// \note
@@ -1653,6 +1657,23 @@ void GPUNodeBuilder::createCallCopyFromDeviceToHost(Value *DeviceData,
   Builder.CreateCall(F, {DeviceData, HostData, Size});
 }
 
+void GPUNodeBuilder::createCallPrefetchAsync(Value *Ptr, Value *Size) {
+  const char *Name = "polly_prefetchAsync";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt64Ty());
+    FunctionType * Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {Ptr, Size});
+}
+
 void GPUNodeBuilder::createCallSynchronizeDevice() {
   assert(PollyManagedMemory && "explicit synchronization is only necessary for "
                                "managed memory");
@@ -1845,6 +1866,47 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   isl_ast_node_free(TransferStmt);
 }
 
+void GPUNodeBuilder::createPrefetchCall(__isl_take isl_ast_node *TransferStmt) {
+  isl_ast_expr *Expr = isl_ast_node_user_get_expr(TransferStmt);
+  isl_ast_expr *Arg = isl_ast_expr_get_op_arg(Expr, 0);
+  isl_id *Id = isl_ast_expr_get_id(Arg);
+  auto Array = (gpu_array_info *)isl_id_get_user(Id);
+  auto ScopArray = (ScopArrayInfo *)(Array->user);
+
+  Value *Size = getArraySize(Array);
+  Value *Offset = getArrayOffset(ScopArray, Array);
+  Value *DevPtr = DeviceAllocations[ScopArray];
+
+  Value *HostPtr = ScopArray->getBasePtr();
+  HostPtr = getLatestValue(HostPtr);
+
+  if (Offset) {
+    HostPtr = Builder.CreatePointerCast(
+        HostPtr, ScopArray->getElementType()->getPointerTo());
+    HostPtr = Builder.CreateGEP(HostPtr, Offset);
+  }
+
+  if (HostPtr->getType()->isPtrOrPtrVectorTy()) {
+
+    HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
+
+    if (Offset) {
+      Size = Builder.CreateSub(
+          Size, Builder.CreateMul(
+              Offset, Builder.getInt64(ScopArray->getElemSizeInBytes())));
+    }
+  
+    if (ScopArray->getValidBounds()) {
+      dbgs() << "valid bounds, create prefetch call";
+      createCallPrefetchAsync(HostPtr, Size);
+    }
+  }
+  isl_id_free(Id);
+  isl_ast_expr_free(Arg);
+  isl_ast_expr_free(Expr);
+  isl_ast_node_free(TransferStmt);
+}
+
 void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   isl_ast_expr *Expr = isl_ast_node_user_get_expr(UserStmt);
   isl_ast_expr *StmtExpr = isl_ast_expr_get_op_arg(Expr, 0);
@@ -1873,11 +1935,13 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     return;
   }
   if (isPrefix(Str, "to_device")) {
-    if (!PollyManagedMemory)
+    if (!PollyManagedMemory) {
       createDataTransfer(UserStmt, HOST_TO_DEVICE);
-    else
-      isl_ast_node_free(UserStmt);
-
+    } else {
+      dbgs() << "initiating prefetch call";
+      createPrefetchCall(UserStmt);
+      //isl_ast_node_free(UserStmt);
+    }
     isl_ast_expr_free(Expr);
     return;
   }
@@ -4116,6 +4180,7 @@ public:
       dbgs()
           << "=== no upper bound found, setting upper bound to array size===\n";
 
+      Array->setValidBounds(false);
       isl::constraint C = isl::constraint::alloc_inequality(
           isl::local_space(AccessSet.get_space()));
       // dbgs() << "Constraint: "; C.dump(); dbgs() << "\n";
@@ -4528,7 +4593,8 @@ public:
       DEBUG(dbgs() << getUniqueScopName(S)
                    << " does not have permutable bands. Bailing out\n";);
     } else {
-      const bool CreateTransferToFromDevice = !PollyManagedMemory;
+      //const bool CreateTransferToFromDevice = !PollyManagedMemory;
+      const bool CreateTransferToFromDevice = true; //hacking this into here, disabling generating the calls later?
       // dbgs() << "\n" << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n";
       // dbgs() << "\t-disabled map_to_device.\n";
       Schedule = map_to_device(PPCGGen, Schedule, CreateTransferToFromDevice);

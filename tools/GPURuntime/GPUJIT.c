@@ -994,7 +994,7 @@ static CuCtxGetCurrentFcnTy *CuCtxGetCurrentFcnPtr;
 typedef CUresult CUDAAPI CuDeviceGetFcnTy(CUdevice *, int);
 static CuDeviceGetFcnTy *CuDeviceGetFcnPtr;
 
-typedef CUresult CUDAAPI CuMemPrefetchAsyncTy(CUdevice *, uint64_t, CUdevice, CUstream);
+typedef CUresult CUDAAPI CuMemPrefetchAsyncTy(void *, long, CUdevice, CUstream);
 static CuMemPrefetchAsyncTy *CuMemPrefetchAsyncFcnPtr;
 
 
@@ -1463,6 +1463,15 @@ static void copyFromDeviceToHostCUDA(PollyGPUDevicePtr *DevData, void *HostData,
   }
 }
 
+static void prefetchAsyncCUDA(void *mem, long MemSize) {
+  dump_function();
+
+  CUstream Stream = 0;
+  CUdevice Device = 0;
+
+  CuMemPrefetchAsyncFcnPtr(mem, MemSize, Device, Stream);
+}
+
 static void launchKernelCUDA(PollyGPUFunction *Kernel, unsigned int GridDimX,
                              unsigned int GridDimY, unsigned int BlockDimX,
                              unsigned int BlockDimY, unsigned int BlockDimZ,
@@ -1808,6 +1817,12 @@ void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
   default:
     err_runtime();
   }
+}
+
+void polly_prefetchAsync(void *mem, long MemSize) {
+  dump_function();
+  //inserting comment to make it recompile?
+  prefetchAsyncCUDA(mem, MemSize);
 }
 
 void polly_launchKernel(PollyGPUFunction *Kernel, unsigned int GridDimX,

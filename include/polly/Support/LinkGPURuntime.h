@@ -32,6 +32,7 @@ struct ForceGPURuntimeLinking {
     polly_freeKernel(nullptr);
     polly_copyFromHostToDevice(nullptr, nullptr, 0);
     polly_copyFromDeviceToHost(nullptr, nullptr, 0);
+    polly_prefetchAsync(nullptr, 0);
     polly_synchronizeDevice();
     polly_launchKernel(nullptr, 0, 0, 0, 0, 0, nullptr);
     polly_freeDeviceMemory(nullptr);
