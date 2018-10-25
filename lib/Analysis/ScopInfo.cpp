@@ -4726,7 +4726,7 @@ void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
   DEBUG(dbgs() << "Invalidate SCoP because of reason " << toString(Kind) << "\n");
   addAssumption(Kind, isl_set_empty(getParamSpace().release()), Loc,
                 AS_ASSUMPTION, BB);
-  assert(false);
+  //assert(false);
 }
 
 isl::set Scop::getInvalidContext() const {

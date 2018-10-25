@@ -3770,9 +3770,13 @@ static __isl_give isl_map *map_intersect(__isl_take isl_map *map1,
 {
 	if (!map1 || !map2)
 		goto error;
-	if (!isl_space_is_equal(map1->dim, map2->dim))
-		isl_die(isl_map_get_ctx(map1), isl_error_invalid,
-			"spaces don't match", goto error);
+	if (!isl_space_is_equal(map1->dim, map2->dim)) {
+                isl_map_free(map1);
+                isl_map_free(map2);
+                return NULL;
+		//isl_die(isl_map_get_ctx(map1), isl_error_invalid,
+		//	"spaces don't match", goto error);
+        }
 	return map_intersect_internal(map1, map2);
 error:
 	isl_map_free(map1);

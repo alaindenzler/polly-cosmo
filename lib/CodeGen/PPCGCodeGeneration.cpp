@@ -82,7 +82,7 @@ enum PollyAssumptionsKind {
   PAK_ContextUpperBound = 4
 };
 
-// Use assumptions to set lower and upper bounds.
+// Use assumptions to set lower and upper bounds. random comment
 // We cannot assume that all loops are nonempty, this is bad for performance.
 static PollyAssumptionsKind useAssumptionsInContext(const Scop &S) {
   if (isNonaffineAllowedFunction(S.getFunction().getName()))
@@ -4111,20 +4111,20 @@ public:
     isl::pw_aff OuterMin = AccessSet.dim_min(0);
 
     if (!AccessSet.dim_has_upper_bound(isl::dim::set, 0)) {
-      // assert(Array->hasStrides() &&
+      //assert(Array->hasStrides() &&
       //        "found nonaffine access to non-fortran array in PPCGCodeGen!");
       dbgs()
           << "=== no upper bound found, setting upper bound to array size===\n";
 
       isl::constraint C = isl::constraint::alloc_inequality(
           isl::local_space(AccessSet.get_space()));
-      // dbgs() << "Constraint: "; C.dump(); dbgs() << "\n";
+      //dbgs() << "Constraint: "; C.dump(); dbgs() << "\n";
       C = C.set_coefficient_si(isl::dim::set, 0, -1);
       C = C.set_constant_si(std::numeric_limits<int>().max());
 
-      // dbgs() << "AccessSet(old): "; AccessSet.dump();
+      //dbgs() << "AccessSet(old): "; AccessSet.dump();
       AccessSet = AccessSet.add_constraint(C);
-      // dbgs() << "AccessSet(new): "; AccessSet.dump();
+      //dbgs() << "AccessSet(new): "; AccessSet.dump();
     }
     isl::pw_aff OuterMax = AccessSet.dim_max(0);
 
@@ -4920,7 +4920,7 @@ public:
           dbgs() << getUniqueScopName(S)
                  << " contains function which cannot be materialised in a GPU "
                     "kernel. Bailing out.\n";);
-      assert(false);
+      //assert(false);
       return false;
     }
 

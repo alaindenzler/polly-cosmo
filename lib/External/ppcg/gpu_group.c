@@ -1274,7 +1274,7 @@ static int depth_accesses_overlap(struct gpu_array_ref_group *group1,
 	int depth;
 	int dim;
 	int empty;
-	isl_map *map_i, *map_j, *map;
+	isl_map *map_i, *map_j, *map, *newmap;
 
 	depth = group1->min_depth;
 	if (group2->min_depth < depth)
@@ -1285,6 +1285,11 @@ static int depth_accesses_overlap(struct gpu_array_ref_group *group1,
 	map_j = isl_map_copy(group2->access);
 	map_j = isl_map_eliminate(map_j, isl_dim_in, depth, dim - depth);
 	map = isl_map_intersect(map_i, map_j);
+        if (map == NULL)
+          printf("overlap map is null\n");
+          newmap = isl_map_empty(isl_map_get_space(map));
+          isl_map_free(map);
+          map = newmap;
 	empty = isl_map_is_empty(map);
 	isl_map_free(map);
 
