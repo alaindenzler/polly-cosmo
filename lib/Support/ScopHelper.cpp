@@ -677,5 +677,5 @@ bool isSubstr(std::string needle, std::string haystack) {
 
 bool polly::isNonaffineAllowedFunction(std::string name) {
     return name == "__radiation_rg_org_MOD_radiation_rg_organize" ||
-        isSubstr(name, "__src_block_fields") || name == "__advec_cell_kernel_module_MOD_advec_cell_kernel";
+        isSubstr(name, "__src_block_fields");
 }
